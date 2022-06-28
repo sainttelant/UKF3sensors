@@ -50,11 +50,11 @@ UKF::UKF() {
   // Radar measurement noise standard deviation radius change in m/s
   std_radrd_ = 0.3;  // fixed value given by the manufacturer
 
-  // State dimension: [pos1 pos2 vel_abs yaw_angle yaw_rate]
-  n_x_ = 5;
+  // State dimension: [pos1 pos2 rbx rby vel_abs yaw_angle yaw_rate]
+  n_x_ = 7;
 
   // Augmented state dimension
-  n_aug_ = 7;
+  n_aug_ = n_x_+ 2;
 
   // Number of sigma points
   n_aug_sigma_ = 2 * n_aug_ + 1;
@@ -169,10 +169,11 @@ void UKF::Initialization(MeasurementPackage meas_package){
     double px = cos(phi) * rho;
     double py = sin(phi) * rho;
 
-    x_ << px, py, 0, 0, 0;
+    x_ << px, py,0,0,0, 0, 0;
   }
   else if  (meas_package.sensor_type_ == MeasurementPackage::LASER){
-    x_ << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1], 0, 0, 0;
+      // Extend to 7 dimensions
+    x_ << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1],0,0, 0, 0, 0;
   }
   else{
     return;  // if no valid measurement arrived, then wait for the next measurement
@@ -188,11 +189,13 @@ void UKF::Initialization(MeasurementPackage meas_package){
   /**
    * Initialize the covariance matrix
    */
-  P_ << 1, 0, 0, 0, 0,
-        0, 1, 0, 0, 0,
-        0, 0, 1, 0, 0,
-        0, 0, 0, 1, 0,
-        0, 0, 0, 0, 1;
+  P_ << 1, 0, 0, 0, 0, 0, 0,
+          0, 1, 0, 0, 0, 0, 0,
+          0, 0, 1, 0, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0,
+          0, 0, 0, 0, 1, 0, 0,
+          0, 0, 0, 0, 0, 1, 0,
+          0, 0, 0, 0, 0, 0, 1;
 
   // set Initialize flag to true
   is_initialized_ = true;
@@ -497,8 +500,8 @@ void UKF::AugmentSigmaPoints(){
 
 #if DEBUG
   std::cout<< "agumented state covariance:\n" << P_aug_ << std::endl;
-  std::cout << "纵向加速度噪声:\n" << P_aug_(5, 5) << std::endl;
-  std::cout << "角加速度噪声:\n" << P_aug_(6, 6) << std::endl;
+  std::cout << "纵向加速度噪声:\n" << P_aug_(7, 7) << std::endl;
+  std::cout << "角加速度噪声:\n" << P_aug_(8, 8) << std::endl;
 #endif
 
   //create square root matrix
@@ -527,17 +530,21 @@ void UKF::PredictSigmaPoints(double delta_t){
     //extract values for better readability
     double p_x = Xsig_aug_(0,i);
     double p_y = Xsig_aug_(1,i);
-    double v = Xsig_aug_(2,i);
-    double yaw = Xsig_aug_(3,i);
-    double yawd = Xsig_aug_(4,i);
+
+    double rb_x = Xsig_aug_(2, i);
+    double rb_y = Xsig_aug_(3, i);
+
+    double v = Xsig_aug_(4,i);
+    double yaw = Xsig_aug_(5,i);
+    double yawd = Xsig_aug_(6,i);
 
     //以下两个是扩展的状态量
-    double nu_a = Xsig_aug_(5,i);
-    double nu_yawdd = Xsig_aug_(6,i);
+    double nu_a = Xsig_aug_(7,i);
+    double nu_yawdd = Xsig_aug_(8,i);
 
     //predicted state values
     //预测的位置
-    double px_p, py_p; 
+    double px_p, py_p, rbx_p, rby_p; 
 
     //avoid division by zero
     // 但是这个等式有一个问题：ψ˙　不能为0，也是说这个等式不能解决车辆沿(斜)直线行驶的问题
@@ -546,10 +553,16 @@ void UKF::PredictSigmaPoints(double delta_t){
       // 角速度不为零的情况，此处使用的是ctvr模型
       px_p = p_x + v/yawd * ( sin (yaw + yawd*delta_t) - sin(yaw));
       py_p = p_y + v/yawd * ( cos(yaw) - cos(yaw+yawd*delta_t) );
+      rbx_p = rb_x + v / yawd * (sin(yaw + yawd * delta_t) - sin(yaw));
+      rby_p = rb_y + v / yawd * (cos(yaw) - cos(yaw + yawd * delta_t));
+
+
     }
     else {
       px_p = p_x + v*delta_t*cos(yaw);
       py_p = p_y + v*delta_t*sin(yaw);
+      rbx_p = rb_x + v * delta_t * cos(yaw);
+      rby_p = rb_y + v * delta_t * sin(yaw);
     }
 
     double v_p = v;
@@ -559,6 +572,10 @@ void UKF::PredictSigmaPoints(double delta_t){
     //add noise
     px_p = px_p + 0.5*nu_a*delta_t*delta_t * cos(yaw);
     py_p = py_p + 0.5*nu_a*delta_t*delta_t * sin(yaw);
+
+    rbx_p = rbx_p + 0.5 * nu_a * delta_t * delta_t * cos(yaw);
+    rby_p = rby_p + 0.5 * nu_a * delta_t * delta_t * sin(yaw);
+
     v_p = v_p + nu_a*delta_t;
 
     yaw_p = yaw_p + 0.5*nu_yawdd*delta_t*delta_t;
@@ -567,9 +584,11 @@ void UKF::PredictSigmaPoints(double delta_t){
     //write predicted sigma point into right column
     Xsig_pred_(0,i) = px_p;
     Xsig_pred_(1,i) = py_p;
-    Xsig_pred_(2,i) = v_p;
-    Xsig_pred_(3,i) = yaw_p;
-    Xsig_pred_(4,i) = yawd_p;
+    Xsig_pred_(2,i) = rbx_p;
+    Xsig_pred_(3,i) = rby_p;
+    Xsig_pred_(4,i) = v_p;
+    Xsig_pred_(5,i) = yaw_p;
+    Xsig_pred_(6,i) = yawd_p;
   }
 }
 

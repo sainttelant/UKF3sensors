@@ -69,7 +69,9 @@ public:
   VectorXd weights_;
 
   // state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
-  // 原始的状态向量，分别是px,py 位置，v速度（矢量）、航向角，角速度,5X1
+  // 原始的状态向量，分别是px,py 位置，v速度（矢量）、航向角，角速度,7X1
+  // modify it to 7 dimensions [pos1 pos2 rbx, rby,vel_abs yaw_angle yaw_rate] 
+  // pos1 pos2 仍然作为雷达和镭射激光的位置，同时作为camera 的左上点，扩展rbx rby作为右下数据
   VectorXd x_;
 
   // state covariance matrix,5X5
