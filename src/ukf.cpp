@@ -1,7 +1,7 @@
 #include <iostream>
 #include "ukf.h"
 
-#define DEBUG 1 // toggle debug
+#define DEBUG 0 // toggle debug
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -352,8 +352,10 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     // extract values for better readability
     double p_x = Xsig_pred_(0,i);
     double p_y = Xsig_pred_(1,i);
-    double v   = Xsig_pred_(2,i);
-    double yaw = Xsig_pred_(3,i);
+    double rb_x = Xsig_pred_(2, i);
+    double rb_y = Xsig_pred_(3, i);
+    double v   = Xsig_pred_(4,i);
+    double yaw = Xsig_pred_(5,i);
 
     double v1 = cos(yaw)*v;
     double v2 = sin(yaw)*v;
