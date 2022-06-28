@@ -145,6 +145,8 @@ int main(int argc, char* argv[]) {
   out_file_ << "time_stamp" << "\t";  
   out_file_ << "px_state" << "\t";
   out_file_ << "py_state" << "\t";
+  out_file_ << "rbx_state" << "\t";
+  out_file_ << "rby_state" << "\t";
   out_file_ << "v_state" << "\t";
   out_file_ << "yaw_angle_state" << "\t";
   out_file_ << "yaw_rate_state" << "\t";
@@ -152,6 +154,8 @@ int main(int argc, char* argv[]) {
   out_file_ << "NIS" << "\t";  
   out_file_ << "px_measured" << "\t";
   out_file_ << "py_measured" << "\t";
+  out_file_ << "rbx_measured" << "\t";
+  out_file_ << "rby_measured" << "\t";
   out_file_ << "px_ground_truth" << "\t";
   out_file_ << "py_ground_truth" << "\t";
   out_file_ << "vx_ground_truth" << "\t";
@@ -171,9 +175,11 @@ int main(int argc, char* argv[]) {
     // output the state vector
     out_file_ << ukf.x_(0) << "\t"; // pos1 - est
     out_file_ << ukf.x_(1) << "\t"; // pos2 - est
-    out_file_ << ukf.x_(2) << "\t"; // vel_abs -est
-    out_file_ << ukf.x_(3) << "\t"; // yaw_angle -est
-    out_file_ << ukf.x_(4) << "\t"; // yaw_rate -est
+    out_file_ << ukf.x_(2) << "\t"; // rbx -est
+    out_file_ << ukf.x_(3) << "\t"; // rby -est
+    out_file_ << ukf.x_(4) << "\t"; // vel_abs -est -est
+    out_file_ << ukf.x_(5) << "\t"; // yaw_angle -est
+    out_file_ << ukf.x_(6) << "\t"; // yaw_rate -est
 
     // output lidar and radar specific data
     if (measurement_pack_list[k].sensor_type_ == MeasurementPackage::LASER) {
