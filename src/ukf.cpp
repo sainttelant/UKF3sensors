@@ -41,6 +41,12 @@ UKF::UKF() {
   // Laser measurement noise standard deviation position2 in m
   std_laspy_ = 0.15;  // fixed value given by the manufacturer
 
+  // Camera measurement noise standard deviation position1 in m
+  std_Caspx_ = 0.2;  // fixed value given by the manufacturer
+
+  // Camera measurement noise standard deviation position2 in m
+  std_Caspy_ = 0.2;  // fixed value given by the manufacturer
+
   // Radar measurement noise standard deviation radius in m
   std_radr_ = 0.3;  // fixed value given by the manufacturer
 
@@ -90,6 +96,8 @@ UKF::UKF() {
   // agumented sigma points matrix
   Xsig_aug_ = MatrixXd(n_aug_, n_aug_sigma_);
 
+
+  m_run = RADARANDLIDAR;
 }
 
 
@@ -143,10 +151,36 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   /**
    * Update// µ½ÁË²âÁ¿½×¶Î
    */
-  if (meas_package.sensor_type_ == MeasurementPackage::LASER){
+
+  int updatelidar=0;
+  int updateradar = 0;
+  int updatecamera = 0;
+  switch (m_run)
+  {
+  case RADAR:
+      updateradar = 1;
+      break;
+  case LIDAR:
+      updatelidar = 1;
+      break;
+  case CAMERA:
+      updatecamera = 1;
+      break;
+  case RADARANDLIDAR:
+       updatelidar = 1;
+       updateradar = 1;
+      updatecamera = 1;
+      break;
+  default:
+      updatelidar = 1;
+      updateradar = 1;
+      updatecamera = 1;
+      break;
+  }
+  if (meas_package.sensor_type_ == MeasurementPackage::LASER && updatelidar){
     UpdateLidar(meas_package);
   }
-  else if (meas_package.sensor_type_ == MeasurementPackage::RADAR){
+  else if (meas_package.sensor_type_ == MeasurementPackage::RADAR && updateradar){
     UpdateRadar(meas_package);
   }
 
@@ -260,15 +294,32 @@ void UKF::UpdateCamera(MeasurementPackage meas_package)
         // extract values for better readability
         double p_x = Xsig_pred_(0, i);
         double p_y = Xsig_pred_(1, i);
-
+        double rbx = Xsig_pred_(2, i);
+        double rby = Xsig_pred_(3, i);
         // measurement model
         Zsig(0, i) = p_x;                        //px
         Zsig(1, i) = p_y;                        //py
-
-
-
+        Zsig(2, i) = rbx;
+        Zsig(3, i) = rby;
     }
 
+    // measurement noise covariance matrix
+    MatrixXd R = MatrixXd(n_z, n_z);
+    R << std_Caspx_ * std_Caspx_, 0, 0, 0,
+        0, std_Caspy_* std_Caspy_, 0, 0,
+        0, 0, std_Caspx_* std_Caspx_, 0,
+        0, 0, 0, std_Caspy_* std_Caspy_;
+
+
+    // Predict radar measurement with given Sigma predictions
+    PredictMeasurement(n_z, Zsig, z_pred, S, R);
+
+    // Update the state
+    VectorXd z = meas_package.raw_measurements_;
+    UpdateState(z, z_pred, S, Zsig);
+
+    // Calculate NIS
+    NIS_Caser_ = (z - z_pred).transpose() * S.inverse() * (z - z_pred);
 
 }
 

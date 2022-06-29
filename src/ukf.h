@@ -11,6 +11,14 @@
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
+enum runtask
+{
+    RADAR,
+    LIDAR,
+    CAMERA,
+    RADARANDLIDAR
+};
+
 class UKF {
 public:
 
@@ -37,6 +45,12 @@ public:
 
   // Laser measurement noise standard deviation position2 in m
   double std_laspy_;
+
+  // Camera measurement noise standard deviation position1 in m
+  double std_Caspx_;
+
+  // Camera measurement noise standard deviation position2 in m
+  double std_Caspy_;
 
   // Radar measurement noise standard deviation radius in m
   double std_radr_;
@@ -65,6 +79,9 @@ public:
   // the current NIS for laser
   double NIS_laser_;
 
+  // the current NIS for Camera
+  double NIS_Caser_;
+
   // Weights of sigma points
   VectorXd weights_;
 
@@ -84,6 +101,8 @@ public:
   // augmented sigma points matrix
   // 这个值算出来之后，要代入运动模型当中，更新新的sigma点， 7X15的矩阵
   MatrixXd Xsig_aug_;
+
+  runtask m_run;
 
   /**
    * Constructor

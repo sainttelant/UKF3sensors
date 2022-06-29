@@ -50,6 +50,7 @@ void check_files(ifstream& in_file, string& in_name,
   }
 }
 
+
 int main(int argc, char* argv[]) {
 
   check_arguments(argc, argv);
@@ -71,9 +72,14 @@ int main(int argc, char* argv[]) {
 
   string line;
 
+  runtask taskselect;
+  taskselect = RADARANDLIDAR;
+
   // prep the measurement packages (each line represents a measurement at a
   // timestamp)
-  while (getline(in_file_, line)) {
+  while (getline(in_file_, line)) 
+  
+  {
     string sensor_type;
     MeasurementPackage meas_package;
     GroundTruthPackage gt_package;
@@ -82,10 +88,33 @@ int main(int argc, char* argv[]) {
 
     // reads first element from the current line
     iss >> sensor_type;
+    int lidartrigger = 0;
+    int radartrigger = 0;
+    int cameratrigger = 0;
+    
+    
 
-    if (sensor_type.compare("L") == 0) {
+    switch (taskselect)
+    {
+    case 0:
+        radartrigger =1;
+        break;
+    case 1:
+        lidartrigger = 1;
+        break;
+    case 2:
+        cameratrigger = 1;
+        break;
+    default:
+        radartrigger = 1;
+        lidartrigger = 1;
+        cameratrigger = 1;
+        break;
+    }
+    if (sensor_type.compare("L") == 0 && lidartrigger) 
+    {
+
       // laser measurement
-
       // read measurements at this timestamp
       meas_package.sensor_type_ = MeasurementPackage::LASER;
       meas_package.raw_measurements_ = VectorXd(2);
@@ -97,7 +126,9 @@ int main(int argc, char* argv[]) {
       iss >> timestamp;
       meas_package.timestamp_ = timestamp;
       measurement_pack_list.push_back(meas_package);
-    } else if (sensor_type.compare("R") == 0) {
+    } 
+    else if (sensor_type.compare("R") == 0 && radartrigger) 
+    {
       // radar measurement
 
       // read measurements at this timestamp
@@ -114,6 +145,10 @@ int main(int argc, char* argv[]) {
       meas_package.timestamp_ = timestamp;
       measurement_pack_list.push_back(meas_package);
     }
+
+
+
+
 
       // read ground truth data to compare later
       float x_gt;
@@ -132,6 +167,7 @@ int main(int argc, char* argv[]) {
   // Create a UKF instance
   UKF ukf;
 
+  ukf.m_run = taskselect;
   // used to compute the RMSE later
   vector<VectorXd> estimations;
   vector<VectorXd> ground_truth;
@@ -154,8 +190,6 @@ int main(int argc, char* argv[]) {
   out_file_ << "NIS" << "\t";  
   out_file_ << "px_measured" << "\t";
   out_file_ << "py_measured" << "\t";
-  out_file_ << "rbx_measured" << "\t";
-  out_file_ << "rby_measured" << "\t";
   out_file_ << "px_ground_truth" << "\t";
   out_file_ << "py_ground_truth" << "\t";
   out_file_ << "vx_ground_truth" << "\t";
